@@ -14,7 +14,9 @@
   implicit none
 !
   integer                  :: nfhout, nfhout_hf, nsout, dt_atmos
-  integer                  :: nfhmax, nfhmax_hf, first_kdt
+  !integer                  :: nfhmax, nfhmax_hf, first_kdt
+  integer                  :: nfhmax_hf, first_kdt
+  real                     :: nfhmax
   integer                  :: num_restart_interval
   integer                  :: frestart(1000)
   type(ESMF_Alarm)         :: alarm_output_hf, alarm_output
