@@ -3249,6 +3249,12 @@
   units = none
   dimensions = ()
   type = logical
+[nssl_invertccn]
+  standard_name = nssl_invertccn
+  long_name = flag to invert CCN in NSSL micro
+  units = none
+  dimensions = ()
+  type = logical
 [tf]
   standard_name = frozen_cloud_threshold_temperature
   long_name = threshold temperature below which all cloud is ice
