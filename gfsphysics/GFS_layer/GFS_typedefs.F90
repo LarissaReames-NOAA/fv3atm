@@ -765,6 +765,7 @@ module GFS_typedefs
     real(kind=kind_phys) :: nssl_alphah    !<  graupel shape parameter
     real(kind=kind_phys) :: nssl_alphahl   !<  hail shape parameter
     logical              :: nssl_hail_on   !<  NSSL flag to deactivate the hail category
+    logical              :: nssl_invertccn !<  NSSL flag to treat CCN as activated (true) or unactivated (false)
 
     !--- Thompson's microphysical parameters
     logical              :: ltaerosol       !< flag for aerosol version
@@ -3052,6 +3053,7 @@ module GFS_typedefs
     real(kind=kind_phys) :: nssl_alphah     = 0.0               !<  graupel shape parameter
     real(kind=kind_phys) :: nssl_alphahl    = 1.0               !<  hail shape parameter
     logical              :: nssl_hail_on    = .true.            !<  NSSL flag to deactivate the hail category
+    logical              :: nssl_invertccn  = .false.           !<  NSSL flag to treat CCN as activated (true) or unactivated (false)
 
     !--- Thompson microphysical parameters
     logical              :: ltaerosol      = .false.            !< flag for aerosol version
@@ -3382,7 +3384,7 @@ module GFS_typedefs
                                mg_alf,   mg_qcmin, mg_do_ice_gmao, mg_do_liq_liu,           &
                                ltaerosol, lradar, nsradar_reset, lrefres, ttendlim,         &
                                lgfdlmprad, nssl_cccn, nssl_alphah, nssl_alphahl,            &
-!                               nssl_hail_on,                                                &
+                               nssl_hail_on, nssl_invertccn,                                &
                           !--- max hourly
                                avg_max_length,                                              &
                           !--- land/surface model control
@@ -3801,6 +3803,7 @@ module GFS_typedefs
     Model%nssl_alphah      = nssl_alphah
     Model%nssl_alphahl     = nssl_alphahl
     Model%nssl_hail_on     = nssl_hail_on
+    Model%nssl_invertccn   = nssl_invertccn
 
 !--- Thompson MP parameters
     Model%ltaerosol        = ltaerosol
@@ -4154,7 +4157,7 @@ module GFS_typedefs
     
 !      IF ( nssl_hail_on .eqv. .false. ) THEN
        write(*,*) 'Model%nthl = ',Model%nthl 
-      IF ( Model%nthl < 1 ) THEN ! If suite name is NSSLg, then hail is turned off in the 
+      IF ( ( Model%nthl < 1 ) .or. ( nssl_hail_on .eqv. .false. ) ) THEN ! If suite name is NSSLg, then hail is turned off in the 
         nssl_hail_on = .false.
         Model%nssl_hail_on = .false.
         ! pretend that hail exists so that bad arrays are not passed to microphysics
@@ -4162,8 +4165,8 @@ module GFS_typedefs
          Model%nthv =  Max( 1, Model%ntgv ) 
          Model%nthnc = Max( 1, Model%ntgnc ) 
       ELSE
-        nssl_hail_on = .true.
-        Model%nssl_hail_on = .true.
+!        nssl_hail_on = .true.
+!        Model%nssl_hail_on = .true.
       ENDIF
 
       Model%nssl_hail_on  = nssl_hail_on
@@ -6722,7 +6725,7 @@ module GFS_typedefs
     elseif (Model%imp_physics == Model%imp_physics_nssl2m .or. Model%imp_physics == Model%imp_physics_nssl2mccn) then
       IF ( Model%nssl_hail_on ) THEN
         ihail = 1
-        Interstitial%nvdiff = 17
+        Interstitial%nvdiff = 17 !  Model%ntrac ! 17
       ELSE
         ihail = 0
         Interstitial%nvdiff = 14 ! turn off hail q,N, and volume
@@ -6841,7 +6844,7 @@ module GFS_typedefs
              n /= Model%ntrw  .and. n /= Model%ntsw  .and. n /= Model%ntrnc   .and. &
              n /= Model%ntsnc .and. n /= Model%ntgl  .and. n /= Model%ntgnc   .and. &
              n /= Model%nthl  .and. n /= Model%nthnc .and. n /= Model%ntgv    .and. &
-             n /= Model%nthv ) then
+             n /= Model%nthv .and. n /= Model%ntccn .and. n /= Model%ntccna ) then
           tracers = tracers + 1
           if (Model%ntke  == n ) then
             Interstitial%otspt(tracers+1,1) = .false.
