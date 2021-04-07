@@ -1897,7 +1897,6 @@ module GFS_typedefs
     real (kind=kind_phys), pointer      :: olyr(:,:)          => null()  !<
     logical              , pointer      :: otspt(:,:)         => null()  !<
     logical              , pointer      :: otsptflag(:)       => null()  !<
-    integer                             :: oz_coeff                      !<
     integer                             :: oz_coeffp5                    !<
     logical                             :: phys_hydrostatic              !<
     real (kind=kind_phys), pointer      :: plvl(:,:)          => null()  !<
