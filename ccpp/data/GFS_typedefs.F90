@@ -3104,7 +3104,7 @@ module GFS_typedefs
     real(kind=kind_phys) :: nssl_alphah     = 0.0               !<  graupel shape parameter
     real(kind=kind_phys) :: nssl_alphahl    = 1.0               !<  hail shape parameter
     logical              :: nssl_hail_on    = .true.            !<  NSSL flag to deactivate the hail category
-    logical              :: nssl_invertccn  = .false.           !<  NSSL flag to treat CCN as activated (true) or unactivated (false)
+    logical              :: nssl_invertccn  = .true.            !<  NSSL flag to treat CCN as activated (true) or unactivated (false)
 
     !--- Thompson microphysical parameters
     logical              :: ltaerosol      = .false.            !< flag for aerosol version
