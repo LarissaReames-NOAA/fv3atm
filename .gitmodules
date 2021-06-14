@@ -9,4 +9,4 @@
 [submodule "ccpp/physics"]
 	path = ccpp/physics
 	url = https://github.com/MicroTed/ccpp-physics.git
-	branch = nsslmicroted-sfe2021
+	branch = nsslmicroted-sfe2021-snowdbz

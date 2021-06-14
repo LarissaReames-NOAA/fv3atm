@@ -64,6 +64,7 @@ list(APPEND _fv3dycore_srcs
   atmos_cubed_sphere/tools/sim_nc_mod.F90
   atmos_cubed_sphere/tools/sorted_index.F90
   atmos_cubed_sphere/tools/test_cases.F90
+  atmos_cubed_sphere/tools/module_diag_hailcast.F90
   atmos_cubed_sphere/driver/fvGFS/DYCORE_typedefs.F90
   atmos_cubed_sphere/driver/fvGFS/fv_nggps_diag.F90
   atmos_cubed_sphere/driver/fvGFS/atmosphere.F90)
