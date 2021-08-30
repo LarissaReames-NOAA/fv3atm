@@ -1872,6 +1872,7 @@ module GFS_typedefs
     real (kind=kind_phys), pointer      :: oc(:)              => null()  !<
     real (kind=kind_phys), pointer      :: olyr(:,:)          => null()  !<
     logical              , pointer      :: otspt(:,:)         => null()  !<
+    logical              , pointer      :: otsptflag(:)       => null()  !<
     integer                             :: oz_coeff                      !<
     integer                             :: oz_coeffp5                    !<
     real (kind=kind_phys), pointer      :: oz_pres(:)         => null()  !<
@@ -3384,7 +3385,7 @@ module GFS_typedefs
                                mg_alf,   mg_qcmin, mg_do_ice_gmao, mg_do_liq_liu,           &
                                ltaerosol, lradar, nsradar_reset, lrefres, ttendlim,         &
                                lgfdlmprad, nssl_cccn, nssl_alphah, nssl_alphahl,            &
-                               nssl_hail_on, nssl_invertccn,                                &
+                               nssl_invertccn,                                              &
                           !--- max hourly
                                avg_max_length,                                              &
                           !--- land/surface model control
@@ -4146,18 +4147,42 @@ module GFS_typedefs
       endif
     endif
 
-      print *, 'Model nthl              : ', Model%nthl
 
-    IF ( Model%imp_physics == Model%imp_physics_nssl2m .or. Model%imp_physics == Model%imp_physics_nssl2mccn ) THEN
+    IF ( Model%imp_physics == Model%imp_physics_nssl2m .or. Model%imp_physics == Model%imp_physics_nssl2mccn ) THEN !{
         ! turn off tracer for CCCN if physics = 17
         IF ( Model%imp_physics == Model%imp_physics_nssl2m ) THEN
+          if (Model%me == Model%master) write(*,*) 'NSSL micro: CCN is OFF'
+            IF ( Model%ntccn > 1 ) THEN
+              IF (Model%me == Model%master) then
+               write(*,*) 'NSSL micro: error! CCN is OFF but ntccn > 1. Should remove ccn_nc from field_table'
+               write(0,*) 'NSSL micro: error! CCN is OFF but ntccn > 1. Should remove ccn_nc from field_table'
+              ENDIF
+            ENDIF
           Model%ntccn = -99
           Model%ntccna = -99
+        ELSEIF ( Model%ntccn < 1 ) THEN
+          if (Model%me == Model%master) then
+            write(*,*) 'NSSL micro: error! CCN is ON but ntccn < 1. Must set ccn_nc in field_table'
+            write(0,*) 'NSSL micro: error! CCN is ON but ntccn < 1. Must set ccn_nc in field_table'
+          ENDIF
+          stop
+        ELSE
+        if (Model%me == Model%master) then
+          write(*,*) 'NSSL micro: CCN is ON'
+        ENDIF
+          IF ( Model%ntccna > 1 .and. Model%me == Model%master ) THEN
+            write(*,*) 'NSSL micro: CCNA is ON'
+          ENDIF
         ENDIF
     
 !      IF ( nssl_hail_on .eqv. .false. ) THEN
-       write(*,*) 'Model%nthl = ',Model%nthl 
-      IF ( ( Model%nthl < 1 ) .or. ( nssl_hail_on .eqv. .false. ) ) THEN ! If suite name is NSSLg, then hail is turned off in the 
+      if (Model%me == Model%master) then
+        write(*,*) 'Model%nthl = ',Model%nthl 
+      ENDIF
+      IF ( ( Model%nthl < 1 ) ) THEN ! check if hail is in the field_table. If not, set flag so the microphysics knows.
+        if (Model%me == Model%master) then
+          write(*,*) 'NSSL micro: hail is OFF'
+        ENDIF
         nssl_hail_on = .false.
         Model%nssl_hail_on = .false.
         ! pretend that hail exists so that bad arrays are not passed to microphysics
@@ -4165,13 +4190,30 @@ module GFS_typedefs
          Model%nthv =  Max( 1, Model%ntgv ) 
          Model%nthnc = Max( 1, Model%ntgnc ) 
       ELSE
-!        nssl_hail_on = .true.
-!        Model%nssl_hail_on = .true.
+        nssl_hail_on = .true.
+        Model%nssl_hail_on = .true.
+        if (Model%me == Model%master) then
+          write(*,*) 'NSSL micro: hail is ON'
+        ENDIF
+        IF ( Model%nthv < 1 .or. Model%nthnc < 1 ) THEN
+           if (Model%me == Model%master) write(0,*) 'missing needed tracers for NSSL hail! nthl > 1 but either volume or number is not in field_table'
+           stop
+        ENDIF
       ENDIF
 
       Model%nssl_hail_on  = nssl_hail_on
 
-    ENDIF
+        IF ( Model%ntgl < 1 .or. Model%ntgv < 1 .or. Model%ntgnc < 1 .or. & 
+             Model%ntsw < 1 .or. Model%ntsnc < 1 .or. & 
+             Model%ntrw < 1 .or. Model%ntrnc < 1 .or. & 
+             Model%ntiw < 1 .or. Model%ntinc < 1 .or. & 
+             Model%ntcw < 1 .or. Model%ntlnc < 1      & 
+             ) THEN
+          if (Model%me == Model%master)  write(0,*) 'missing needed tracers for NSSL!'
+           stop
+        ENDIF
+
+    ENDIF !}
 
     ! -- setup aerosol scavenging factors
     allocate(Model%fscav(Model%ntchm))
@@ -4651,6 +4693,9 @@ module GFS_typedefs
       Model%nieffr = 2
       Model%nseffr = 3
       Model%lradar = .true.
+      if (.not. Model%effr_in) then
+        Model%effr_in = .true.
+      ENDIF
       if (Model%me == Model%master) print *,' Using NSSL double moment', &
                                           ' microphysics', &
                                           ' lradar =',Model%lradar,' ttendlim =',Model%ttendlim, &
@@ -4671,6 +4716,10 @@ module GFS_typedefs
       Model%nieffr = 2
       Model%nseffr = 3
       Model%lradar = .true.
+      if (.not. Model%effr_in) then
+        Model%effr_in = .true.
+      ENDIF
+
       if (Model%me == Model%master) print *,' Using NSSL double moment', &
                                           ' microphysics with CCN', &
                                           ' lradar =',Model%lradar,' ttendlim =',Model%ttendlim, &
@@ -6293,6 +6342,7 @@ module GFS_typedefs
     type(GFS_control_type), intent(in) :: Model
     !
     allocate (Interstitial%otspt      (Model%ntracp1,2))
+    allocate (Interstitial%otsptflag  (Model%ntracp1))
     ! Set up numbers of tracers for PBL, convection, etc: sets
     ! Interstitial%{nncl,nvdiff,mg3_as_mg2,nn,tracers_total,ntiwx,ntk,ntkev,otspt,nsamftrac,ncstrac,nscav}
     call interstitial_setup_tracers(Interstitial, Model)
@@ -6707,6 +6757,7 @@ module GFS_typedefs
     Interstitial%ntkev            = 0
     Interstitial%tracers_total    = 0
     Interstitial%otspt(:,:)       = .true.
+    Interstitial%otsptflag(:)     = .true.
     Interstitial%nsamftrac        = 0
     Interstitial%ncstrac          = 0
     Interstitial%nscav            = Model%ntrac-Model%ncld+2
@@ -6730,7 +6781,7 @@ module GFS_typedefs
         ihail = 0
         Interstitial%nvdiff = 14 ! turn off hail q,N, and volume
       ENDIF
-      write(*,*) 'NSSL: nvdiff, ntrac = ',Interstitial%nvdiff, Model%ntrac
+      ! write(*,*) 'NSSL: nvdiff, ntrac = ',Interstitial%nvdiff, Model%ntrac
       if (Model%satmedmf) Interstitial%nvdiff = Interstitial%nvdiff + 1
       if (Model%imp_physics == Model%imp_physics_nssl2m) then
         Interstitial%nncl = 4 + ihail
@@ -6838,6 +6889,7 @@ module GFS_typedefs
     if (Model%cscnv .or. Model%satmedmf .or. Model%trans_trac ) then
       Interstitial%otspt(:,:)   = .true.     ! otspt is used only for cscnv
       Interstitial%otspt(1:3,:) = .false.    ! this is for sp.hum, ice and liquid water
+      Interstitial%otsptflag(:) = .true.
       tracers = 2
       do n=2,Model%ntrac
         if ( n /= Model%ntcw  .and. n /= Model%ntiw  .and. n /= Model%ntclamt .and. &
@@ -6856,6 +6908,8 @@ module GFS_typedefs
 !               ntrw  == n .or. ntsw  == n .or. ntgl  == n)                    &
                   Interstitial%otspt(tracers+1,1) = .false.
           if (Interstitial%trans_aero .and. Model%ntchs == n) Interstitial%itc = tracers
+        else
+          Interstitial%otsptflag(n) = .false.
         endif
       enddo
       Interstitial%tracers_total = tracers - 2
